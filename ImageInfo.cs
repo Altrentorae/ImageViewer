@@ -9,9 +9,19 @@ namespace ImageViewer {
     public class ImageInfo {
         public ImageInfo(string path) {
             imgPath = path;
+            isVideo = path.Contains(".mp4");
+            isGif = path.Contains(".gif");
+            dateCreated = System.IO.File.GetCreationTime(path);
+            dateModified = System.IO.File.GetLastWriteTime(path);
         }
 
+        public bool isVideo { get; private set; }
+        public bool isGif { get; private set; }
         public string imgPath { get; private set; }
+        public string imgName { get => GetImageName(); private set { } }
+        public DateTime dateCreated { get; private set; }
+        public DateTime dateModified { get; private set; }
+
         private Image ImageCache;
         public Image Image {
             get {
@@ -21,7 +31,7 @@ namespace ImageViewer {
             private set { }            
         }
 
-        public void PreloadImage() {
+        private void PreloadImage() {
             ImageCache = Image.FromFile(imgPath);
         }
         public void PreloadImageSafe() {
@@ -30,11 +40,24 @@ namespace ImageViewer {
             }
         }
 
-        public int relativeIndex { get; set; }
-
         public void DisposeImage() {
-            Image.Dispose();
+            if(ImageCache == null) { return; }
+            //Image.Dispose();
             ImageCache = null;
+        }
+
+        private string GetImageName(int FolderFallback = 0) {
+            FolderFallback++;
+
+            string[] split = imgPath.Split('\\');
+            Array.Reverse(split);
+
+            string retStr = "";
+            for (int i = 0; i<FolderFallback; i++) {
+                retStr += split[i];
+            }
+
+            return retStr;
         }
     }
 }
