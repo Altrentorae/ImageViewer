@@ -12,33 +12,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json;
 
-/*
-TODO
-----------
-:: FIX
-:::: skin selection box not displaying name from file
-
-:: Options
-:::: toggle for exit popup
-
-:: Custom windowframe
-:::: move window with mouse
-:::: snap window
-:::: resize window
-
-:: Right click quick changes
-:::: shuffle seed
-:::: find by index
-:::: autonext interval 
-
-:: Image Viewing
-:::: Zoom
-
-:: Skinning
-:::: Other forms (FindBoxForm)
-:::: Exit menu
-:::: Recolor trackbar heads (may require OnPaint())
-*/
 namespace ImageViewer {
     public partial class MainForm : Form {
 
