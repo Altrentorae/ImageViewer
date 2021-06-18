@@ -836,6 +836,7 @@ namespace ImageViewer {
             UserSettings us = JsonConvert.DeserializeObject<UserSettings>(File.ReadAllText("~UserSettings.json"));
 
             VC_VolumeSlider.Value = us.INT_VideoVolume;
+            axWindowsMediaPlayer1.settings.volume = VC_VolumeSlider.Value;
             opt_combo_NIB.SelectedIndex = us.INT_NewImageSetting;
             sortOrderBox.SelectedIndex = us.INT_ImageSortSetting;
             //skinSelectionBox.SelectedIndex = us.INT_SkinSelectedSetting; skinSelectionBox.Text = AllColorSchemes[skinSelectionBox.SelectedIndex].SkinName;
