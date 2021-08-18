@@ -36,3 +36,5 @@ This project was made because I wanted an ultra-lightweight image viewing softwa
 * This project does not have a release download, if you wish to use it before release please build it yourself. If you wish to help the development process feel free to fix some issues and open a pull request.
 
 * This is a project that I have worked on-and-off for the last year or so, it was never intended for public use but I changed my mind. Some things may not work as you may expect, I do not have a UX designer on hand.
+
+* Not all packages in packages.config are still required in this version, however removing them from the config can cause issues.
