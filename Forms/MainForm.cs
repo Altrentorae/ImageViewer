@@ -11,6 +11,8 @@ using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using System.Threading;
+using Timer = System.Windows.Forms.Timer;
 
 namespace ImageViewer {
     public partial class MainForm : Form {
@@ -84,18 +86,24 @@ namespace ImageViewer {
         private async Task _openFolderUnsafe(object sender, EventArgs e) {
             await _LoadImages(sender, e, false);
         }
-
+        
+        public void LoadImageFromII(ImageInfo imgInf)
+        {
+            Playlists[SelectedPlaylistIndex].Add(imgInf);
+            InitPicBox();
+        }
 
         #pragma warning disable IDE0017
         private async Task _LoadImages(object sender, EventArgs e, bool validate) {
+
             ToolStripMenuItem send = (ToolStripMenuItem)sender;
 
             if (send.Name == "openImages") {
                 OpenFileDialog fd = new OpenFileDialog();
-                fd.Filter = "Images (*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG,)|*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG|" +
+                fd.Filter = "Images (*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG,)|*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG;*.WEBP|" +
                     "Gifs (*.GIF)|*.GIF|" +
                     "Videos (*.MP4)|*.MP4|" +
-                    "All (*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG;*.MP4)|*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG;*.MP4";
+                    "All (*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG;*.MP4)|*.BMP;*.JPG;*.GIF;*.PNG;*.JPEG;*.WEBP;*.MP4";
                 fd.Multiselect = true;
                 fd.Title = "Select Images";
                 fd.ShowDialog();
@@ -116,15 +124,33 @@ namespace ImageViewer {
                 var fileListNoSort = Directory.GetFiles(ffd.FileName, "*", SearchOption.AllDirectories);
                 var files = new List<string>();
 
-                files = validate ? await Task.Run(() => ValidateFolder(fileListNoSort)) : files = fileListNoSort.ToList();
+                BackgroundWorker BW = new BackgroundWorker();
+                Thread MainThread = Thread.CurrentThread;
 
-                if (files.Count > 0) {
-                    AttemptClearActiveList();
-                    foreach (string image in files) {
-                        Playlists[SelectedPlaylistIndex].Add(new ImageInfo(image));
+                BW.DoWork += (s, ev) =>
+                {
+                    files = validate ? ValidateFolder(fileListNoSort) : __OpenImagesNoValid_ToListVisible(fileListNoSort, files);
+
+                    if (files.Count > 0)
+                    {
+                        this.Invoke((MethodInvoker)AttemptClearActiveList);
+                        for (int i = 0; i < files.Count; i++)
+                        {
+                            string image = files[i];
+                            this.Invoke((MethodInvoker)delegate
+                            { 
+                                Playlists[SelectedPlaylistIndex].Add(new ImageInfo(image));
+                                __OpenImagesNoValid_ToListVisible_UIThreadInvoker(i+1, files.Count, "Generating info");
+                            });
+
+                        }
+                        this.Invoke((MethodInvoker)InitPicBox);
                     }
-                    InitPicBox();
-                }
+                };
+
+                BW.RunWorkerCompleted += (s, ev) => { sortOrderChanged(null, null); };
+
+                BW.RunWorkerAsync();
             }
 
             if(sortOrderBox.SelectedIndex != 4) {
@@ -132,6 +158,48 @@ namespace ImageViewer {
             }
         }
         #pragma warning restore
+
+        private List<string> __OpenImagesNoValid_ToListVisible(string[] fileListUnsorted, List<string> files)
+        {
+            for(int i=0; i< fileListUnsorted.Length; i++)
+            {
+                files.Add(fileListUnsorted[i]);
+                __OpenImagesNoValid_ToListVisible_UIThreadInvoker(i+1, fileListUnsorted.Length, "Loading images");
+            }
+
+            return files;
+        }
+
+        private void __OpenImagesNoValid_ToListVisible_UIThreadInvoker(float done, float total, string desc)
+        {
+            if (this.label_imageIndex.InvokeRequired)
+            {
+                this.label_imageIndex.BeginInvoke((MethodInvoker)delegate () { label_imageIndex.Text = $"({desc}) | ({done}/{total}) | ({((done / total) * 100).ToString()}%)"; });
+            }
+            else
+            {
+                label_imageIndex.Text = $"(Loading images) | ({done}/{total}) | ({(((done) / total) * 100).ToString()}%)";
+            }
+        }
+
+        public async Task LoadImages_FromAPI(ExternalAPIHandler API, string[] tags, int amount)
+        {
+            List<ImageInfo> r = new List<ImageInfo>();
+            try
+            {
+                await Task.Run(() =>
+                {
+                    r = API.GetImagesAsync(tags, amount).Result;
+                });
+            }
+            catch (Exception) { return; }
+            if(r == null) { return; }
+            foreach (ImageInfo ii in r)
+            {
+                Playlists[SelectedPlaylistIndex].Add(ii);
+            }
+            InitPicBox();
+        }
 
         private void AttemptClearActiveList() {
             if (opt_combo_NIB.SelectedIndex == 0) { Playlists[SelectedPlaylistIndex].Clear(); }
@@ -224,36 +292,98 @@ namespace ImageViewer {
 
         #region CORE - ImageChanging / UI Visuals
 
+        bool imageShown = false;
+        private void pictureBox1_LoadCompleted(object sender, AsyncCompletedEventArgs e)
+        {
+            panel_loadingOverlay.Hide();
+            imageShown = true;
+            //Console.WriteLine("LOC Cancelled");
+            
+        }
+
+        private void pictureBox1_LoadProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            loadingProgressBar.Value = e.ProgressPercentage;
+            if(e.ProgressPercentage == 100)
+            {
+                imageShown = true;
+                panel_loadingOverlay.Hide();
+            }
+            else
+            {
+                imageShown = false;
+                panel_loadingOverlay.Show();
+            }
+        }
+
+        private void LoadingOverlayControl()
+        {
+            //Console.WriteLine("Entered LOC");
+            if (imageShown) { return; }
+            this.Invoke(new MethodInvoker(delegate()
+            {
+                panel_loadingOverlay.Show();
+            }));
+        }
+
+
+        Task waitTask;
+        private async Task DelayLoadingOverlay()
+        {
+            await Task.Delay(150);
+        }
+
         public void changeImage(ImageInfo inf) {
-            try {
-                if (inf.isVideo) {
+            imageShown = false;
+            waitTask = Task.Run(() => DelayLoadingOverlay());
+            //Console.WriteLine("LOC Started");
+            try
+            {
+                if (inf.isVideo)
+                {
                     pictureBox1.Visible = false;
                     axWindowsMediaPlayer1.Show();
                     axWindowsMediaPlayer1.URL = inf.imgPath;
                     axWindowsMediaPlayer1.uiMode = "none";
                     VideoPlayer_ToggleUI(true);
+                    imageShown = true;
 
                 }
-                else if (inf.isGif) {
+                else if (inf.isGif)
+                {
                     axWindowsMediaPlayer1.URL = "";
                     pictureBox1.Visible = true;
                     axWindowsMediaPlayer1.Hide();
                     pictureBox1.Image = inf.Image;
                     VideoPlayer_ToggleUI(false);
+                    imageShown = true;
                 }
-                else {
+                else
+                {
                     axWindowsMediaPlayer1.URL = "";
                     pictureBox1.Visible = true;
                     axWindowsMediaPlayer1.Hide();
-                    pictureBox1.Image = inf.Image;
                     VideoPlayer_ToggleUI(false);
+                    if (inf.isOnlineResource)
+                    {
+                        try
+                        {
+                            pictureBox1.LoadAsync(inf.imgPath);
+                        }
+                        catch (System.ArgumentException) { }
+                    }
+                    else
+                    {
+                        imageShown = true;
+                        pictureBox1.Image = inf.Image;
+                    }
                 }
+                if (imageShown) { panel_loadingOverlay.Hide(); }
             
             }
             catch (OutOfMemoryException) {
                 pictureBox1.Image = pictureBox1.ErrorImage;
             }
-
 
             UpdateUI();
         }
@@ -290,9 +420,11 @@ namespace ImageViewer {
 
             VideoPlayer_ToggleUI(false);
             axWindowsMediaPlayer1.Hide();
+            panel_loadingOverlay.Hide();
             pictureBox1.AllowDrop = true;
 
             AllColorSchemes = new List<ColorScheme>();
+            InitSkinButtonControlList();
             AddDefaultSkins();
             ReadAllSkins();
             skinSelectionBox.SelectedIndex = 0;
@@ -311,6 +443,8 @@ namespace ImageViewer {
             InitialiseSettingsControlsEventHandlers();
         }
 
+        
+
         private async void sortOrderChanged(object sender, EventArgs e) {
             if (Playlists[SelectedPlaylistIndex].Count < 2) { return; }
             await SortImages(sortOrderBox.SelectedIndex);
@@ -320,9 +454,14 @@ namespace ImageViewer {
             BindingList<ImageInfo> returnList = await Task.Run(() => _SortImages(sortIndex));
             UpdateUI();
             _AssignNewList(returnList);
-            if (!shuffle) {
-                changeImage(Playlists[SelectedPlaylistIndex][imageIndex]);
+            try
+            {
+                if (!shuffle)
+                {
+                    changeImage(Playlists[SelectedPlaylistIndex][imageIndex]);
+                }
             }
+            catch { changeImage(Playlists[SelectedPlaylistIndex][0]); }
         }
 
         private async Task<BindingList<ImageInfo>> _SortImages(int sortIndex) {
@@ -376,7 +515,7 @@ namespace ImageViewer {
         #region FEATURE - GoToIndex
 
         private void findByIndex_Click(object sender, EventArgs e) {
-            FindBoxForm form = new FindBoxForm();
+            FindBoxForm form = new FindBoxForm(ActiveColorScheme);
             form.ShowDialog(this);
         }
         public void GotoIndex_Return(int index) {
@@ -446,10 +585,34 @@ namespace ImageViewer {
 
         private bool shuffle = false;
         private List<ImageInfo> shuffleList = new List<ImageInfo>();
+        private bool sdctBound = false;
+        private Timer shuffleDoubleClickTimer = new Timer()
+        {
+            Interval = 500
+        };
         private void buttonShuffle_Click(object sender, EventArgs e) {
             if(Playlists[SelectedPlaylistIndex].Count < 2) { return; }
+            if (!sdctBound) { sdctBound = true; shuffleDoubleClickTimer.Tick += (s, ie) => shufTimer(); }
+            
+            if(shuffle && shuffleDoubleClickBox.Checked && !shuffleDoubleClickTimer.Enabled)
+            {
+                shuffleDoubleClickTimer.Start();
+                buttonShuffle.BackColor = Color.Red;
+                buttonShuffle.FlatAppearance.BorderColor = Color.Red;
+                return;
+            }
+
+            if (shuffleDoubleClickTimer.Enabled)
+            {
+                shuffleDoubleClickTimer.Stop();
+            }
+            else if(shuffle && shuffleDoubleClickBox.Checked && !shuffleDoubleClickTimer.Enabled)
+            {
+                return;
+            }
+            
             shuffle = !shuffle;
-            buttonShuffle.BackColor = shuffle ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
+            SetShufCol();
             if (shuffle) {
                 shuffleList = new List<ImageInfo>(Playlists[SelectedPlaylistIndex]);
                 shuffleList.Shuffle();
@@ -461,6 +624,18 @@ namespace ImageViewer {
             else {
                 changeImage(Playlists[SelectedPlaylistIndex][imageIndex]);
             }
+        }
+
+        private void shufTimer()
+        {
+            SetShufCol();
+            shuffleDoubleClickTimer.Stop(); 
+        }
+
+        private void SetShufCol()
+        {
+            buttonShuffle.BackColor = shuffle ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
+            buttonShuffle.FlatAppearance.BorderColor = shuffle ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
         }
 
         #endregion
@@ -475,6 +650,12 @@ namespace ImageViewer {
             MainForm_KeyDown(sender, kea);
         }
 
+        private void onlineSearchURLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OnlineSourceForm osf = new OnlineSourceForm(this, ActiveColorScheme);
+            osf.ShowDialog(this);
+        }
+
         private void exitToolStripMenuItem_Click(object sender, EventArgs e) {
             Application.Exit();
         }
@@ -485,6 +666,7 @@ namespace ImageViewer {
             pictureBox1.Width = optionsPanel.Visible ? this.Width - optPanelSize : this.Width;
             axWindowsMediaPlayer1.Width = optionsPanel.Visible ? this.Width - optPanelSize : this.Width;
             button_toggleOptionsPanel.BackColor = optionsPanel.Visible ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
+            button_toggleOptionsPanel.FlatAppearance.BorderColor = optionsPanel.Visible ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
         }
 
         
@@ -492,6 +674,14 @@ namespace ImageViewer {
         //find image in explorer
         private void imageNameTag_DoubleClick(object sender, EventArgs e) {
             try {
+                ImageInfo ii = shuffle ? shuffleList[imageIndex] : Playlists[SelectedPlaylistIndex].ToList()[imageIndex];
+                if (ii.isOnlineResource) 
+                {
+                    Process.Start(ii.imgPath);
+                    return;
+                }
+
+
                 string arg = $@"/select, ""{
                     (shuffle ?
                     shuffleList[imageIndex].imgPath
@@ -517,6 +707,7 @@ namespace ImageViewer {
         private void button_AutoNext_Click(object sender, EventArgs e) {
             autoNext = !autoNext;
             button_AutoNext.BackColor = autoNext ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
+            button_AutoNext.FlatAppearance.BorderColor = autoNext ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
 
             if (!tickBound) {
                 autoNext_Tick = (int)autonext_Interval_Box.Value;
@@ -578,6 +769,24 @@ namespace ImageViewer {
 
         #region FEATURE - ColorScheme / Skin
 
+        List<Control> buttonControlsSkin = new List<Control>();
+
+        private void InitSkinButtonControlList()
+        {
+            buttonControlsSkin.AddRange(new List<Control>()
+            {
+                buttonPrev,
+                buttonNext,
+                button_toggleOptionsPanel,
+                button_AutoNext,
+                button1,
+                buttonShuffle,
+                VC_PP,
+                VC_Slider,
+                VC_VolumeSlider
+            });
+        }
+
         private void AddDefaultSkins() {
             DEFAULTS.Clear();
             DEFAULTS = new List<ColorScheme> {
@@ -631,7 +840,7 @@ namespace ImageViewer {
                 }
             }
 
-            ApplySkin(cs);
+            Skinner.ApplySkin(this, cs, out ActiveColorScheme, menuStrip1, buttonControlsSkin);
             
         }
 
@@ -698,100 +907,13 @@ namespace ImageViewer {
 
         private void SkinSelectionChanged(object sender, EventArgs e) {
             try {
-                ApplySkin(AllColorSchemes[skinSelectionBox.SelectedIndex]);
+                Skinner.ApplySkin(this, AllColorSchemes[skinSelectionBox.SelectedIndex], out ActiveColorScheme, menuStrip1, buttonControlsSkin);
             }
-            catch (ArgumentOutOfRangeException) { ApplySkin(AllColorSchemes[0]); }
+            catch (ArgumentOutOfRangeException) { Skinner.ApplySkin(this, AllColorSchemes[0], out ActiveColorScheme, menuStrip1, buttonControlsSkin); }
             customSkinNameBox.Text = ActiveColorScheme.SkinName;
         }
 
         //--------------------------------------------------//
-
-        public void ApplySkin(ColorScheme newSkin) {
-
-            ControlList.Clear();
-            List<Control> _controlList = GetAllControls(this);
-
-            this.BackColor = newSkin.FormBase;
-
-            foreach (Control C in _controlList) {
-                if (C.GetType() == typeof(MenuStrip)) {
-                    C.BackColor = newSkin.MenuStrip;
-                    C.ForeColor = newSkin.Text_Foreground;
-                }
-                if (C.GetType() == typeof(Panel)) {
-                    switch (C.Name) {
-                        case "NavPanel": C.BackColor = newSkin.NavBar; break;
-                        case "optionsPanel": C.BackColor = newSkin.OptionsPanel; break;
-                    }
-                    C.ForeColor = newSkin.NavBar;
-                }
-                if(C.GetType() == typeof(PictureBox)) {
-                    C.BackColor = newSkin.FormBase;
-                }
-                if (C.GetType() == typeof(GroupBox)) {
-                    C.BackColor = C.Parent.BackColor;
-                    C.ForeColor = newSkin.Text_Foreground;
-                }
-
-            }
-            foreach (Control C in _controlList) {
-                if (C.GetType() == typeof(Label)) {
-                    C.ForeColor = newSkin.Text_Foreground;
-                    if (C.Name == "imageNameTag") { C.BackColor = newSkin.MenuStrip; continue; }
-                    if (C.Name == "label_imageIndex") { C.BackColor = newSkin.MenuStrip; continue; }
-                    C.BackColor = C.Parent.BackColor;
-                }
-                if (C.GetType() == typeof(Button)) {
-                    if(C.Parent.Name == "skinGroupBox") {
-                        if(C.Name == "colorpicker_FormBase") { C.BackColor = newSkin.FormBase; C.ForeColor = GetInvertedColor(newSkin.FormBase);  }
-                        if(C.Name == "colorpicker_Text") { C.BackColor = newSkin.Text_Foreground; C.ForeColor = GetInvertedColor(newSkin.Text_Foreground); }
-                        if(C.Name == "colorpicker_menustrip") { C.BackColor = newSkin.MenuStrip; C.ForeColor = GetInvertedColor(newSkin.MenuStrip); }
-                        if(C.Name == "colorpicker_navbar") { C.BackColor = newSkin.NavBar; C.ForeColor = GetInvertedColor(newSkin.NavBar); }
-                        if(C.Name == "colorpicker_options") { C.BackColor = newSkin.OptionsPanel; C.ForeColor = GetInvertedColor(newSkin.OptionsPanel); }
-                        if(C.Name == "colorpicker_buttonOn") { C.BackColor = newSkin.Button_On; C.ForeColor = GetInvertedColor(newSkin.Button_On); }
-                        continue;
-                    }
-                    Button b = (Button)C;
-                    b.FlatAppearance.BorderColor = C.Parent.BackColor;
-                    C.ForeColor = newSkin.Text_Foreground;
-                    C.BackColor = C.Parent.BackColor;
-                }
-                if (C.GetType() == typeof(ToolStripMenuItem)) {
-                    C.ForeColor = newSkin.Text_Foreground;
-                    C.BackColor = C.Parent.BackColor;
-                }
-                if (C.GetType() == typeof(MenuItem)) {
-                    C.ForeColor = newSkin.Text_Foreground;
-                    C.BackColor = C.Parent.BackColor;
-                }
-            }
-
-            foreach(ToolStripMenuItem mi in menuStrip1.Items) {
-                foreach (ToolStripMenuItem mi2 in mi.DropDownItems) {
-                    mi2.BackColor = newSkin.MenuStrip;
-                    mi2.ForeColor = newSkin.Text_Foreground;
-                }
-                mi.BackColor = newSkin.MenuStrip;
-                mi.ForeColor = newSkin.Text_Foreground;
-                
-            }
-
-            ActiveColorScheme = newSkin;
-        }
-        
-        List<Control> ControlList = new List<Control>();
-        private List<Control> GetAllControls(Control container) {
-            foreach (Control c in container.Controls) {
-                ControlList.Add(c);
-                
-                if (c.Controls.Count > 0) { GetAllControls(c); }
-            }
-            return ControlList;
-        }
-
-        private Color GetInvertedColor(Color c) {
-            return Color.FromArgb(c.ToArgb() ^ 0xffffff);
-        }
 
         private void MainForm_Shown(object sender, EventArgs e) {
             //ApplySkin(CS_Blue);
@@ -813,6 +935,8 @@ namespace ImageViewer {
             opt_combo_NIB.SelectedIndexChanged += (s, e) => WriteSettings();
             skinSelectionBox.SelectedIndexChanged += (s, e) => WriteSettings();
             autonext_Interval_Box.ValueChanged += (s, e) => WriteSettings();
+            exitConfirmationBox.Click += (s, e) => WriteSettings();
+            shuffleDoubleClickBox.Click += (s, e) => WriteSettings();
         }
 
         private void WriteSettings() {
@@ -823,7 +947,9 @@ namespace ImageViewer {
         }
 
         private void UpdateSettingsFromForm() {
+            userSettings.BOOL_ShuffleDoubleClickEnabled = shuffleDoubleClickBox.Checked;
             userSettings.BOOL_OptionsOpen = optionsPanel.Visible;
+            userSettings.BOOL_ExitPromptEnabled = exitConfirmationBox.Checked;
             userSettings.INT_AutoplayInterval = (int)autonext_Interval_Box.Value;
             userSettings.INT_ImageSortSetting = sortOrderBox.SelectedIndex;
             userSettings.INT_NewImageSetting = opt_combo_NIB.SelectedIndex;
@@ -835,13 +961,19 @@ namespace ImageViewer {
         private void InitialiseFromFile() {
             UserSettings us = JsonConvert.DeserializeObject<UserSettings>(File.ReadAllText("~UserSettings.json"));
 
+            exitConfirmationBox.Checked = us.BOOL_ExitPromptEnabled;
             VC_VolumeSlider.Value = us.INT_VideoVolume;
             axWindowsMediaPlayer1.settings.volume = VC_VolumeSlider.Value;
             opt_combo_NIB.SelectedIndex = us.INT_NewImageSetting;
             sortOrderBox.SelectedIndex = us.INT_ImageSortSetting;
             //skinSelectionBox.SelectedIndex = us.INT_SkinSelectedSetting; skinSelectionBox.Text = AllColorSchemes[skinSelectionBox.SelectedIndex].SkinName;
             autonext_Interval_Box.Value = us.INT_AutoplayInterval;
-            optionsPanel.Visible = us.BOOL_OptionsOpen; button_toggleOptionsPanel.BackColor = us.BOOL_OptionsOpen ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
+            optionsPanel.Visible = us.BOOL_OptionsOpen;
+            optionsPanel.Width = us.BOOL_OptionsOpen ? optPanelSize : 0;
+            pictureBox1.Width = us.BOOL_OptionsOpen ? this.Width - optPanelSize : this.Width;
+            axWindowsMediaPlayer1.Width = us.BOOL_OptionsOpen ? this.Width - optPanelSize : this.Width;
+            button_toggleOptionsPanel.BackColor = us.BOOL_OptionsOpen ? ActiveColorScheme.Button_On : ActiveColorScheme.NavBar;
+            shuffleDoubleClickBox.Checked = us.BOOL_ShuffleDoubleClickEnabled;
         }
 
         #endregion
@@ -921,6 +1053,7 @@ namespace ImageViewer {
         #region CORE - Window Sizing
 
         private void SystemButton_Close_Click(object sender, EventArgs e) {
+            if (!exitConfirmationBox.Checked) { Environment.Exit(0); }
             if (MessageBox.Show("Are you sure you want to close ImageViewer?", "Close ImageViewer?", MessageBoxButtons.YesNo) == DialogResult.Yes) {
                 Environment.Exit(0);
             }
@@ -956,8 +1089,11 @@ namespace ImageViewer {
         }
 
 
-        #endregion
 
-        
+
+
+
+
+        #endregion
     }
 }

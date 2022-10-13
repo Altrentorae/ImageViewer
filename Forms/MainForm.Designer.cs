@@ -42,12 +42,14 @@
             this.openImages = new System.Windows.Forms.ToolStripMenuItem();
             this.openFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.openFolderUnsafe = new System.Windows.Forms.ToolStripMenuItem();
+            this.onlineSearchURLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.findToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.findByIndex = new System.Windows.Forms.ToolStripMenuItem();
-            this.axWindowsMediaPlayer1 = new AxWMPLib.AxWindowsMediaPlayer();
             this.optionsPanel = new System.Windows.Forms.Panel();
+            this.shuffleDoubleClickBox = new System.Windows.Forms.CheckBox();
+            this.exitConfirmationBox = new System.Windows.Forms.CheckBox();
             this.autonext_Interval_Box = new System.Windows.Forms.NumericUpDown();
             this.skinGroupBox = new System.Windows.Forms.GroupBox();
             this.CustomSkin_Delete = new System.Windows.Forms.Button();
@@ -71,15 +73,20 @@
             this.SystemButton_Close = new System.Windows.Forms.Button();
             this.SystemButton_Max = new System.Windows.Forms.Button();
             this.SystemButton_Min = new System.Windows.Forms.Button();
+            this.axWindowsMediaPlayer1 = new AxWMPLib.AxWindowsMediaPlayer();
+            this.panel_loadingOverlay = new System.Windows.Forms.Panel();
+            this.loadingProgressBar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.NavPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.VC_VolumeSlider)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.VC_Slider)).BeginInit();
             this.menuStrip1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.axWindowsMediaPlayer1)).BeginInit();
             this.optionsPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.autonext_Interval_Box)).BeginInit();
             this.skinGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.axWindowsMediaPlayer1)).BeginInit();
+            this.panel_loadingOverlay.SuspendLayout();
             this.SuspendLayout();
             // 
             // pictureBox1
@@ -94,6 +101,8 @@
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
+            this.pictureBox1.LoadCompleted += new System.ComponentModel.AsyncCompletedEventHandler(this.pictureBox1_LoadCompleted);
+            this.pictureBox1.LoadProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.pictureBox1_LoadProgressChanged);
             this.pictureBox1.DragDrop += new System.Windows.Forms.DragEventHandler(this.pictureBox1_DragDrop);
             this.pictureBox1.DragEnter += new System.Windows.Forms.DragEventHandler(this.pictureBox1_DragEnter);
             this.pictureBox1.DragLeave += new System.EventHandler(this.pictureBox1_DragLeave);
@@ -102,11 +111,11 @@
             // 
             this.label_imageIndex.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label_imageIndex.ForeColor = System.Drawing.SystemColors.Control;
-            this.label_imageIndex.Location = new System.Drawing.Point(1050, 1);
+            this.label_imageIndex.Location = new System.Drawing.Point(166, 1);
             this.label_imageIndex.Name = "label_imageIndex";
-            this.label_imageIndex.Size = new System.Drawing.Size(112, 23);
+            this.label_imageIndex.Size = new System.Drawing.Size(996, 23);
             this.label_imageIndex.TabIndex = 2;
-            this.label_imageIndex.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.label_imageIndex.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // buttonNext
             // 
@@ -298,6 +307,7 @@
             this.openImages,
             this.openFolder,
             this.openFolderUnsafe,
+            this.onlineSearchURLToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -313,7 +323,7 @@
             this.openImages.Name = "openImages";
             this.openImages.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
             this.openImages.ShowShortcutKeys = false;
-            this.openImages.Size = new System.Drawing.Size(179, 22);
+            this.openImages.Size = new System.Drawing.Size(180, 22);
             this.openImages.Text = "&Open";
             this.openImages.Click += new System.EventHandler(this.LoadImages);
             // 
@@ -326,7 +336,7 @@
             this.openFolder.Name = "openFolder";
             this.openFolder.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
             this.openFolder.ShowShortcutKeys = false;
-            this.openFolder.Size = new System.Drawing.Size(179, 22);
+            this.openFolder.Size = new System.Drawing.Size(180, 22);
             this.openFolder.Text = "Open Folder";
             this.openFolder.Click += new System.EventHandler(this.LoadImages);
             // 
@@ -339,16 +349,25 @@
             this.openFolderUnsafe.Name = "openFolderUnsafe";
             this.openFolderUnsafe.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
             this.openFolderUnsafe.ShowShortcutKeys = false;
-            this.openFolderUnsafe.Size = new System.Drawing.Size(179, 22);
+            this.openFolderUnsafe.Size = new System.Drawing.Size(180, 22);
             this.openFolderUnsafe.Text = "Open Folder (Unsafe)";
             this.openFolderUnsafe.Click += new System.EventHandler(this.openFolderUnsafe_Click);
+            // 
+            // onlineSearchURLToolStripMenuItem
+            // 
+            this.onlineSearchURLToolStripMenuItem.BackColor = System.Drawing.Color.DimGray;
+            this.onlineSearchURLToolStripMenuItem.ForeColor = System.Drawing.Color.White;
+            this.onlineSearchURLToolStripMenuItem.Name = "onlineSearchURLToolStripMenuItem";
+            this.onlineSearchURLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.onlineSearchURLToolStripMenuItem.Text = "Online Search / URL";
+            this.onlineSearchURLToolStripMenuItem.Click += new System.EventHandler(this.onlineSearchURLToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.BackColor = System.Drawing.Color.DimGray;
             this.exitToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -382,22 +401,11 @@
             this.findByIndex.Text = "Index";
             this.findByIndex.Click += new System.EventHandler(this.findByIndex_Click);
             // 
-            // axWindowsMediaPlayer1
-            // 
-            this.axWindowsMediaPlayer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.axWindowsMediaPlayer1.Enabled = true;
-            this.axWindowsMediaPlayer1.Location = new System.Drawing.Point(0, 24);
-            this.axWindowsMediaPlayer1.Name = "axWindowsMediaPlayer1";
-            this.axWindowsMediaPlayer1.OcxState = ((System.Windows.Forms.AxHost.State)(resources.GetObject("axWindowsMediaPlayer1.OcxState")));
-            this.axWindowsMediaPlayer1.Size = new System.Drawing.Size(1100, 551);
-            this.axWindowsMediaPlayer1.TabIndex = 5;
-            this.axWindowsMediaPlayer1.PlayStateChange += new AxWMPLib._WMPOCXEvents_PlayStateChangeEventHandler(this.VideoPlayer_StateChange);
-            // 
             // optionsPanel
             // 
             this.optionsPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
+            this.optionsPanel.Controls.Add(this.shuffleDoubleClickBox);
+            this.optionsPanel.Controls.Add(this.exitConfirmationBox);
             this.optionsPanel.Controls.Add(this.autonext_Interval_Box);
             this.optionsPanel.Controls.Add(this.skinGroupBox);
             this.optionsPanel.Controls.Add(this.skinSelectionBox);
@@ -412,6 +420,32 @@
             this.optionsPanel.Name = "optionsPanel";
             this.optionsPanel.Size = new System.Drawing.Size(180, 548);
             this.optionsPanel.TabIndex = 6;
+            // 
+            // shuffleDoubleClickBox
+            // 
+            this.shuffleDoubleClickBox.AutoSize = true;
+            this.shuffleDoubleClickBox.Checked = true;
+            this.shuffleDoubleClickBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.shuffleDoubleClickBox.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.shuffleDoubleClickBox.Location = new System.Drawing.Point(9, 413);
+            this.shuffleDoubleClickBox.Name = "shuffleDoubleClickBox";
+            this.shuffleDoubleClickBox.Size = new System.Drawing.Size(119, 17);
+            this.shuffleDoubleClickBox.TabIndex = 4;
+            this.shuffleDoubleClickBox.Text = "Shuffle DoubleClick";
+            this.shuffleDoubleClickBox.UseVisualStyleBackColor = true;
+            // 
+            // exitConfirmationBox
+            // 
+            this.exitConfirmationBox.AutoSize = true;
+            this.exitConfirmationBox.Checked = true;
+            this.exitConfirmationBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.exitConfirmationBox.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.exitConfirmationBox.Location = new System.Drawing.Point(9, 390);
+            this.exitConfirmationBox.Name = "exitConfirmationBox";
+            this.exitConfirmationBox.Size = new System.Drawing.Size(117, 17);
+            this.exitConfirmationBox.TabIndex = 4;
+            this.exitConfirmationBox.Text = "Confirm Exit Prompt";
+            this.exitConfirmationBox.UseVisualStyleBackColor = true;
             // 
             // autonext_Interval_Box
             // 
@@ -645,9 +679,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageNameTag.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.imageNameTag.ForeColor = System.Drawing.SystemColors.Control;
-            this.imageNameTag.Location = new System.Drawing.Point(103, 1);
+            this.imageNameTag.Location = new System.Drawing.Point(166, 1);
             this.imageNameTag.Name = "imageNameTag";
-            this.imageNameTag.Size = new System.Drawing.Size(933, 21);
+            this.imageNameTag.Size = new System.Drawing.Size(870, 21);
             this.imageNameTag.TabIndex = 7;
             this.imageNameTag.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.imageNameTag.DoubleClick += new System.EventHandler(this.imageNameTag_DoubleClick);
@@ -692,6 +726,53 @@
             this.SystemButton_Min.UseVisualStyleBackColor = true;
             this.SystemButton_Min.Click += new System.EventHandler(this.SystemButton_Min_Click);
             // 
+            // axWindowsMediaPlayer1
+            // 
+            this.axWindowsMediaPlayer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.axWindowsMediaPlayer1.Enabled = true;
+            this.axWindowsMediaPlayer1.Location = new System.Drawing.Point(0, 24);
+            this.axWindowsMediaPlayer1.Name = "axWindowsMediaPlayer1";
+            this.axWindowsMediaPlayer1.OcxState = ((System.Windows.Forms.AxHost.State)(resources.GetObject("axWindowsMediaPlayer1.OcxState")));
+            this.axWindowsMediaPlayer1.Size = new System.Drawing.Size(1100, 551);
+            this.axWindowsMediaPlayer1.TabIndex = 5;
+            this.axWindowsMediaPlayer1.PlayStateChange += new AxWMPLib._WMPOCXEvents_PlayStateChangeEventHandler(this.VideoPlayer_StateChange);
+            // 
+            // panel_loadingOverlay
+            // 
+            this.panel_loadingOverlay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel_loadingOverlay.Controls.Add(this.loadingProgressBar);
+            this.panel_loadingOverlay.Controls.Add(this.label5);
+            this.panel_loadingOverlay.Location = new System.Drawing.Point(282, 130);
+            this.panel_loadingOverlay.Name = "panel_loadingOverlay";
+            this.panel_loadingOverlay.Size = new System.Drawing.Size(547, 301);
+            this.panel_loadingOverlay.TabIndex = 9;
+            // 
+            // loadingProgressBar
+            // 
+            this.loadingProgressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.loadingProgressBar.Location = new System.Drawing.Point(40, 59);
+            this.loadingProgressBar.Name = "loadingProgressBar";
+            this.loadingProgressBar.Size = new System.Drawing.Size(462, 100);
+            this.loadingProgressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+            this.loadingProgressBar.TabIndex = 2;
+            // 
+            // label5
+            // 
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 26.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.ForeColor = System.Drawing.Color.White;
+            this.label5.Location = new System.Drawing.Point(143, 202);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(269, 39);
+            this.label5.TabIndex = 1;
+            this.label5.Text = "Loading Content";
+            this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // MainForm
             // 
             this.AllowDrop = true;
@@ -699,6 +780,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.DimGray;
             this.ClientSize = new System.Drawing.Size(1280, 599);
+            this.Controls.Add(this.panel_loadingOverlay);
             this.Controls.Add(this.label_imageIndex);
             this.Controls.Add(this.SystemButton_Min);
             this.Controls.Add(this.SystemButton_Max);
@@ -724,12 +806,13 @@
             ((System.ComponentModel.ISupportInitialize)(this.VC_Slider)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.axWindowsMediaPlayer1)).EndInit();
             this.optionsPanel.ResumeLayout(false);
             this.optionsPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.autonext_Interval_Box)).EndInit();
             this.skinGroupBox.ResumeLayout(false);
             this.skinGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.axWindowsMediaPlayer1)).EndInit();
+            this.panel_loadingOverlay.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -784,6 +867,12 @@
         private System.Windows.Forms.Label VC_StartTimeLabel;
         private System.Windows.Forms.Label VC_EndTimeLabel;
         private System.Windows.Forms.TrackBar VC_VolumeSlider;
+        private System.Windows.Forms.ToolStripMenuItem onlineSearchURLToolStripMenuItem;
+        private System.Windows.Forms.Panel panel_loadingOverlay;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.ProgressBar loadingProgressBar;
+        private System.Windows.Forms.CheckBox exitConfirmationBox;
+        private System.Windows.Forms.CheckBox shuffleDoubleClickBox;
     }
 }
 

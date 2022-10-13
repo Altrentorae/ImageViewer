@@ -10,8 +10,10 @@ using System.Windows.Forms;
 
 namespace ImageViewer {
     public partial class FindBoxForm : Form {
-        public FindBoxForm() {
+        public FindBoxForm(ColorScheme scheme) {
             InitializeComponent();
+            ColorScheme _ = new ColorScheme();
+            Skinner.ApplySkin(this, scheme, out _, null, null);
         }
 
         private void button_Cancel_Click(object sender, EventArgs e) {

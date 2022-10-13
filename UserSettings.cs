@@ -14,6 +14,8 @@ namespace ImageViewer {
         public int INT_SkinSelectedSetting { get; set; }
         public int INT_AutoplayInterval { get; set; }
         public bool BOOL_OptionsOpen { get; set; }
+        public bool BOOL_ExitPromptEnabled { get; set; }
+        public bool BOOL_ShuffleDoubleClickEnabled { get; set; }
         
     }
 }
